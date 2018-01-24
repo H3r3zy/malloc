@@ -37,3 +37,7 @@ x
 y
 z
 test.c
+cmake-build-debug
+.idea
+a.out
+test.cpp
