@@ -5,90 +5,14 @@
 ** Created by sahel.lucas-saoudi@epitech.eu,
 */
 
-#include <stdio.h>
-#include <unistd.h>
+#include <stddef.h>
 #include <memory.h>
+#include <unistd.h>
+#include <pthread.h>
 #include "malloc.h"
 
-t_memory *g_list = NULL;
-
-char is_in_range(void *ptr, t_memory *block) {
-	return ((void *) block->data <= ptr && (void *) block->data + block->size >= ptr);
-}
-
-t_memory *get_memory_block_by_data_ptr(void *data_ptr)
-{
-	t_memory *tmp = g_list;
-
-	if (!tmp)
-		return NULL;
-	while (tmp->next && !is_in_range(data_ptr, tmp)) {
-		tmp = tmp->next;
-	}
-	if (is_in_range(data_ptr, tmp)) {
-//		printf("MATCH %p :: %p :: %p\n", data_ptr, tmp->data, tmp->data + tmp->size);
-		return tmp;
-	}
-	return NULL;
-}
-
-void free(void *ptr)
-{
-	t_memory *block = get_memory_block_by_data_ptr(ptr);
-	t_memory *previous = NULL;
-
-	if (!block)
-		return;
-	block->free = FREE;
-	previous = block->previous;
-	if (!block->next) {
-		brk(block);
-		if (previous) {
-			previous->next = NULL;
-			if (previous->free == FREE)
-				free(previous->data);
-		}
-		if (!previous)
-			g_list = NULL;
-	}
-}
-
-void *malloc(size_t size)
-{
-	//write(1, "Malloc\n", 7);
-	t_memory *block;
-	t_memory *tmp = g_list;
-
-	/**
-	 * Si block deja dispo
-	 */
-	while (tmp && tmp->next) {
-		if (tmp->free == FREE && tmp->size >= size) {
-			tmp->free = NOT_FREE;
-			return tmp->data;
-		}
-		tmp = tmp->next;
-	}
-	tmp = g_list;
-
-	block = sbrk(0);
-	if (-1 == brk(block + size + sizeof(t_memory))) {
-		write(1, "Erreur1\n", 8);
-		return NULL;
-	}
-	block->next = NULL;
-	block->free = NOT_FREE;
-	block->ptr = block;
-	block->size = size;
-	while (tmp && tmp->next)
-		tmp = tmp->next;
-	block->previous = (tmp) ? (tmp) : (NULL);
-	if (tmp)
-		tmp->next = block;
-	else
-		g_list = block;
-//	write(1, "FINloc\n", 7);
-	return block->data;
+void my_putstr(char *str) {
+	write(1, str, strlen(str));
 }
 
 void my_putchar(char c)
@@ -115,38 +39,195 @@ int     my_put_nbr(int n)
 	return (n);
 }
 
+t_block *g_list = NULL;
+
+t_block *fusion_block(t_block *block)
+{
+//	my_putstr("Fusion Block\n");
+	if (block && block->next && block->next->free == FREE) {
+
+		block->size += block->next->size;
+		block->next = block->next->next;
+		if (block->next)
+			block->next->previous = block;
+	}
+	return (block);
+}
+
+t_block *split_block(t_block *block, size_t size)
+{
+//	my_putstr("Split Block\n");
+	t_block *new_block = NULL;
+
+	if (!block || block->size < size + sizeof(t_block) + 1)
+		return (block);
+
+	new_block = (t_block *)((char  *)(block + size + 1 + sizeof(t_block)));
+	if (new_block >= sbrk(0))
+		return (block);
+	new_block->previous = block;
+	new_block->next = block->next;
+	if (new_block->next)
+		new_block->next->previous = new_block;
+	new_block->size = block->size - size - sizeof(t_block) - 1;
+	new_block->free = FREE;
+	block->size = size;
+	block->next = new_block;
+	return (block);
+}
+/*
+t_block *get_block_by_data(void *ptr)
+{
+	t_block *tmp = g_list;
+
+	while (tmp && tmp < sbrk(0) && (char *)(tmp + 1) != ptr)
+		tmp = tmp->next;
+	return (tmp);
+}*/
+
+t_block *get_block_by_data(void *ptr)
+{
+	t_block *block = (t_block *)ptr - 1;
+	if (!g_list || block < g_list || block > sbrk(0))
+		return (NULL);
+	return (block);
+}
+
+void free(void *ptr)
+{
+	t_block *block = get_block_by_data(ptr);
+
+	if (block) {
+		block->free = FREE;
+		if (block->next && block->next->free == FREE)
+			block = fusion_block(block);
+		/*if (block->previous && block->previous->free == FREE)
+			fusion_block(block->previous);*/
+		/*if (g_list->free == FREE) {
+			brk(g_list);
+			g_list = NULL;
+		}*/
+	}
+}
+
+t_block *get_last_block(void)
+{
+	t_block *block = g_list;
+
+	while (block && block->next) {
+		block = block->next;
+	}
+	return (block);
+}
+
+t_block *add_full_block(int min_size)
+{
+	t_block *block;
+	t_block *tmp = get_last_block();
+	int size = getpagesize();
+
+	while (size < min_size + sizeof(t_block))
+		size += getpagesize();
+	size += getpagesize() * MIN_PAGESIZE_NUMBER;
+
+	block = sbrk(0);
+
+	if (-1 == brk(block + size))
+		return (NULL);
+	block->next = NULL;
+	block->free = FREE;
+	block->size = size - sizeof(t_block);
+	block->previous = tmp;
+	if (tmp) {
+		tmp->next = block;
+	} else {
+		g_list = block;
+	}
+	return (block);
+}
+
+void *malloc(size_t size)
+{
+	t_block *block = NULL;
+	t_block *tmp = g_list;
+	//static lock_type counter_lock = LOCK_INITIALIZER;
+
+	//pthread_mutex_lock(counter_lock);
+	while (tmp) {
+		if (tmp->free == FREE && tmp->size >= size) {
+			tmp = split_block(tmp, size);
+			tmp->free = NOT_FREE;
+	//		pthread_mutex_unlock(counter_lock);
+			return ((char *)(tmp + 1));
+		}
+		tmp = tmp->next;
+	}
+
+	block = add_full_block(size);
+	if (!block) {
+	//	pthread_mutex_unlock(counter_lock);
+		return (NULL);
+	}
+	block = split_block(block, size);
+	block->free = NOT_FREE;
+	//pthread_mutex_unlock(counter_lock);
+	return ((char *)(block + 1));
+}
+
+void move_block_data(t_block *dest, t_block *src)
+{
+	int size = dest->size > src->size ? src->size : dest->size;
+
+	memmove((char *)(dest + 1), (char *)(src + 1), size);
+}
+
 void *realloc(void *ptr, size_t size)
 {
-	t_memory *new_block;
-	//write(1, "REALLOC\n", 8);
-	if (size == 0 && ptr) {
+	t_block *block = NULL;
+	t_block *new_block = NULL;
+
+
+	if (size == 0) {
 		free(ptr);
-		return ptr;
+		return (ptr);
 	}
-	if (!ptr)
-		return malloc(size);
 
-	t_memory *block = get_memory_block_by_data_ptr(ptr);
-	if (!block)
-		return malloc(size);
+	if (!ptr) {
+		return (malloc(size));
+	}
+
+	block = get_block_by_data(ptr);
+	if (!block || size < block->size) // TODO add split block of size (size)
+		return (ptr);
+
 	if (block->next) {
-		new_block = malloc(size);
-	}
-	else {
-		new_block = block;
-		if (-1 == brk(block + size + sizeof(t_memory))) {
-			return NULL;
+		if (block->next->free == FREE && block->size + block->next->size + sizeof(t_block) >= size) {
+			return ((char *) (fusion_block(block) + 1));
 		}
-		new_block->size = size;
-		return new_block->data;
+		new_block = malloc(size);
+		if (!new_block)
+			return (NULL);
+		new_block = get_block_by_data(new_block);
+		move_block_data(new_block, block);
+		if (block != new_block)
+			free(block);
+		block->free = NOT_FREE;
+		return ((char *)(new_block + 1));
 	}
-	if (!new_block)
-		return NULL;
 
-	if (block->size <= size)
-		memcpy(new_block->data, block->data, block->size);
-	else
-		memcpy(new_block->data, block->data, size);
-	free(block->data);
-	return new_block->data;
+	if (-1 == brk((char *)(block + size + sizeof(char *))))
+		return (NULL);
+	block->size = size;
+	block->free = NOT_FREE;
+	return ((char *)(block + 1));
+}
+
+void *calloc(size_t num, size_t size)
+{
+	void *ptr = malloc(num * size);
+
+	if (!ptr)
+		return (NULL);
+	memset(ptr, 0, num * size);
+	return (ptr);
 }

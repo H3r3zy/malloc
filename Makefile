@@ -14,7 +14,7 @@ NAME	=	libmy_malloc.so
 CFLAGS	=	-W -Wall -Wextra -I src
 
 $(NAME):
-	gcc -shared -o $(NAME) -fPIC $(SRC)
+	gcc -shared -o $(NAME) -fPIC $(SRC) -pthread
 
 all: $(NAME)
 
