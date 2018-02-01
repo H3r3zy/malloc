@@ -11,35 +11,8 @@
 #include <pthread.h>
 #include "malloc.h"
 
-void my_putstr(char *str) {
-	write(1, str, strlen(str));
-}
-
-void my_putchar(char c)
-{
-	write(1, &c, 1);
-}
-
-int     my_put_nbr(int n)
-{
-	if (n < 0)
-	{
-		write(1, "-", 1);
-		n = -n;
-	}
-	if (n >= 10)
-	{
-		my_put_nbr(n / 10);
-		my_putchar(n % 10 + '0');
-	}
-	if (n < 10)
-	{
-		my_putchar(n % 10 + '0');
-	}
-	return (n);
-}
-
 t_block *g_list = NULL;
+//pthread_mutex_t thread_safe = PTHREAD_MUTEX_INITIALIZER;
 
 t_block *fusion_block(t_block *block)
 {
@@ -58,6 +31,12 @@ t_block *split_block(t_block *block, size_t size)
 {
 //	my_putstr("Split Block\n");
 	t_block *new_block = NULL;
+	/*size_t tmp = getpagesize() - sizeof(t_block);
+	while (tmp < size) {
+		tmp += getpagesize();
+	}
+	//size = size + getpagesize() + sizeof(t_block);
+	size = tmp;*/
 
 	if (!block || block->size < size + sizeof(t_block) + 1)
 		return (block);
@@ -85,6 +64,16 @@ t_block *get_block_by_data(void *ptr)
 	return (tmp);
 }*/
 
+void lock(void)
+{
+	pthread_mutex_lock(&thread_safe);
+}
+
+void unlock(void)
+{
+	pthread_mutex_unlock(&thread_safe);
+}
+
 t_block *get_block_by_data(void *ptr)
 {
 	t_block *block = (t_block *)ptr - 1;
@@ -95,19 +84,22 @@ t_block *get_block_by_data(void *ptr)
 
 void free(void *ptr)
 {
-	t_block *block = get_block_by_data(ptr);
+	t_block *block = NULL;
 
+	lock();
+	block = get_block_by_data(ptr);
 	if (block) {
 		block->free = FREE;
 		if (block->next && block->next->free == FREE)
 			block = fusion_block(block);
-		/*if (block->previous && block->previous->free == FREE)
-			fusion_block(block->previous);*/
+		if (block->previous && block->previous->free == FREE)
+			fusion_block(block->previous);
 		/*if (g_list->free == FREE) {
 			brk(g_list);
 			g_list = NULL;
 		}*/
 	}
+	unlock();
 }
 
 t_block *get_last_block(void)
@@ -120,13 +112,19 @@ t_block *get_last_block(void)
 	return (block);
 }
 
+size_t align(size_t size) {
+	return size;
+//	return ALIGN_8(size);
+	//return MALLOC_ALIGN(size, sizeof(int *));
+}
+
 t_block *add_full_block(int min_size)
 {
 	t_block *block;
 	t_block *tmp = get_last_block();
 	int size = getpagesize();
 
-	while (size < min_size + sizeof(t_block))
+	while (size <= min_size + sizeof(t_block))
 		size += getpagesize();
 	size += getpagesize() * MIN_PAGESIZE_NUMBER;
 
@@ -149,15 +147,16 @@ t_block *add_full_block(int min_size)
 void *malloc(size_t size)
 {
 	t_block *block = NULL;
-	t_block *tmp = g_list;
-	//static lock_type counter_lock = LOCK_INITIALIZER;
+	t_block *tmp = NULL;
 
-	//pthread_mutex_lock(counter_lock);
+	lock();
+	size = align(size);
+	tmp = g_list;
 	while (tmp) {
 		if (tmp->free == FREE && tmp->size >= size) {
 			tmp = split_block(tmp, size);
 			tmp->free = NOT_FREE;
-	//		pthread_mutex_unlock(counter_lock);
+			unlock();
 			return ((char *)(tmp + 1));
 		}
 		tmp = tmp->next;
@@ -165,12 +164,12 @@ void *malloc(size_t size)
 
 	block = add_full_block(size);
 	if (!block) {
-	//	pthread_mutex_unlock(counter_lock);
+		unlock();
 		return (NULL);
 	}
 	block = split_block(block, size);
 	block->free = NOT_FREE;
-	//pthread_mutex_unlock(counter_lock);
+	unlock();
 	return ((char *)(block + 1));
 }
 
@@ -186,39 +185,55 @@ void *realloc(void *ptr, size_t size)
 	t_block *block = NULL;
 	t_block *new_block = NULL;
 
-
-	if (size == 0) {
+	lock();
+	if (size == 0 && ptr) {
+		unlock();
 		free(ptr);
 		return (ptr);
 	}
-
+	size = align(size);
 	if (!ptr) {
+		unlock();
 		return (malloc(size));
 	}
 
 	block = get_block_by_data(ptr);
-	if (!block || size < block->size) // TODO add split block of size (size)
+	if (!block || size < block->size) {
+		split_block(block, size);
+		unlock();
 		return (ptr);
+	}
 
 	if (block->next) {
 		if (block->next->free == FREE && block->size + block->next->size + sizeof(t_block) >= size) {
-			return ((char *) (fusion_block(block) + 1));
+			void *data = (char *)(fusion_block(block) + 1);
+			unlock();
+			return (data);
 		}
+		unlock();
 		new_block = malloc(size);
-		if (!new_block)
+		if (!new_block) {
 			return (NULL);
+		}
+		lock();
 		new_block = get_block_by_data(new_block);
 		move_block_data(new_block, block);
-		if (block != new_block)
-			free(block);
-		block->free = NOT_FREE;
+		if (block != new_block) {
+			unlock();
+			free((char *)(block + 1));
+		}
+		new_block->free = NOT_FREE;
+		unlock();
 		return ((char *)(new_block + 1));
 	}
 
-	if (-1 == brk((char *)(block + size + sizeof(char *))))
+	if (-1 == brk((char *)(block + size + sizeof(char *)))) {
+		unlock();
 		return (NULL);
+	}
 	block->size = size;
 	block->free = NOT_FREE;
+	unlock();
 	return ((char *)(block + 1));
 }
 
@@ -228,6 +243,13 @@ void *calloc(size_t num, size_t size)
 
 	if (!ptr)
 		return (NULL);
+	lock();
 	memset(ptr, 0, num * size);
+	unlock();
 	return (ptr);
+}
+
+void *tcmalloc(size_t num)
+{
+	return (malloc(num));
 }

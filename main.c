@@ -5,27 +5,36 @@
 
 int main() {
 	int j = 0;
-	/*
-	while (1) {
-		char *str = malloc(1024);
-		char *str2 = malloc(1024);
-		printf("%p\n", str, str);
-		printf("%p\n", str2, str2);
+/*
+	while (j < 10) {
+		char *str = malloc(1);
+		char *str2 = malloc(1);
+		my_put_nbr(str);
+		my_putstr("\n");
+		my_put_nbr(str2);
+		my_putstr("\n");
 		free(str);
 		free(str2);
 		j++;
 	}*/
-	/*while (1) {
-		char *str = strdup("bite en boucle");
-
-		printf("%p\n", get_memory_block_by_data_ptr(str));
-		char *str2 = strdup("E-Penis");
-		printf("%p\n", get_memory_block_by_data_ptr(str2));
+	/*
+	char *str = malloc(4);
+	for (int i = 0; i < 10000; i++) {
+		str[i] = "a";
+	}
+	str = malloc(6);*/
+	/*
+	while (1) {
+		char *str = strdup("bite en boucle\n");
+		char *str2 = strdup("E-Penis\n");
+		my_putstr(str);
+		my_putstr(str2);
 		free(str);
 		free(str2);
 	}*/
-	char **str = malloc(sizeof(char *) * 1);
-	while (j < 10000) {
+	/*char **str = malloc(sizeof(char *) * 1);
+
+	while (j < 10) {
 		str[j] = strdup("E-Penis");
 		printf("%s :: %p :: ", str[j], str[j]);
 		str = realloc(str, sizeof(char *) * (j + 2));
@@ -39,7 +48,7 @@ int main() {
 		free(str[j]);
 		j++;
 	}
-	free(str);
+	free(str);*/
 	/*
 	char **str = malloc(sizeof(char *) * 2);
 	while (j < 1) {
