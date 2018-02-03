@@ -1,22 +1,60 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "backup/malloc.h"
+#include "malloc.h"
 
 int main() {
 	int j = 0;
-/*
-	while (j < 10) {
-		char *str = malloc(1);
-		char *str2 = malloc(1);
-		my_put_nbr(str);
-		my_putstr("\n");
-		my_put_nbr(str2);
-		my_putstr("\n");
-		free(str);
-		free(str2);
-		j++;
-	}*/
+	my_putstr("\n");show_alloc_mem();
+	void *ptr1 = malloc(1);
+	my_putstr("\n");show_alloc_mem();
+	void *ptr2 = malloc(2);
+	my_putstr("\n");show_alloc_mem();
+	void *ptr3 = malloc(3);
+	my_putstr("\n");show_alloc_mem();
+	void *ptr4 = malloc(4);
+	my_putstr("\n");show_alloc_mem();
+	void *ptr5 = malloc(5);
+	my_putstr("\n");show_alloc_mem();
+	void *ptr6 = malloc(6);
+	my_putstr("\n");show_alloc_mem();
+	void *ptr7 = malloc(7);
+	my_putstr("\n");show_alloc_mem();
+	void *ptr8 = malloc(8);
+	my_putstr("\n");show_alloc_mem();
+	void *ptr9 = malloc(9);
+	my_putstr("\n");show_alloc_mem();
+	free(ptr7);
+	my_putstr("\n");show_alloc_mem();
+	free(ptr4);
+	my_putstr("\n");show_alloc_mem();
+	free(ptr5);
+	my_putstr("\n");show_alloc_mem();
+	free(ptr6);
+	my_putstr("\n");show_alloc_mem();
+	free(ptr1);
+	my_putstr("\n");show_alloc_mem();
+	free(ptr2);
+	my_putstr("\n");show_alloc_mem();
+	free(ptr3);
+	my_putstr("\n");show_alloc_mem();
+	free(ptr8);
+	my_putstr("\n");show_alloc_mem();
+	ptr9 = realloc(ptr9, 160000);
+	my_putstr("\n");show_alloc_mem();
+
+	/*
+		while (j < 10) {
+			char *str = malloc(1);
+			char *str2 = malloc(1);
+			my_put_nbr(str);
+			my_putstr("\n");
+			my_put_nbr(str2);
+			my_putstr("\n");
+			free(str);
+			free(str2);
+			j++;
+		}*/
 	/*
 	char *str = malloc(4);
 	for (int i = 0; i < 10000; i++) {

@@ -31,4 +31,9 @@ fclean: clean
 
 re: fclean all
 
-.PHONY:	all clean fclean re
+debug:	CFLAGS += -ggdb3
+
+debug: fclean
+	gcc -D DEBUG=1 -shared -o $(NAME) -fPIC $(SRC) -lpthread
+
+.PHONY:	all clean fclean re unaligned
