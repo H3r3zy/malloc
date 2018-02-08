@@ -54,8 +54,8 @@ void move_block_data(t_block *dest, t_block *src)
 t_block *morecore(t_block *end, int size)
 {
 	t_block *block;
-	int new_size = ALIGN_UP(size, PAGESIZE)
-		+ PAGESIZE * MIN_PAGESIZE_NUMBER;
+	int new_size =
+		ALIGN_UP(size, PAGESIZE) + PAGESIZE * MIN_PAGESIZE_NUMBER;
 
 	allocated += new_size;
 	block = sbrk(0);
@@ -119,6 +119,7 @@ void *realloc(void *ptr, size_t size)
 {
 	t_block *block = VALIDBLOCK(DATA2HEADER(ptr));
 	t_block *new_block = NULL;
+	void *data = NULL;
 
 	if (size == 0 && ptr) {
 		free(ptr);
@@ -135,9 +136,10 @@ void *realloc(void *ptr, size_t size)
 		return (ptr);
 	}
 	if (block->next) {
-		if (block->next->free == FREE && block->size + BLOCK_SIZE(block->next->size) >= size) {
+		if (block->next->free == FREE &&
+			block->size + BLOCK_SIZE(block->next->size) >= size) {
 			LOCK(&thread_safe);
-			void *data = VALIDBLOCK(HEADER2DATA(fusion_block(block)));
+			data = VALIDBLOCK(HEADER2DATA(fusion_block(block)));
 			UNLOCK(&thread_safe);
 			return (data);
 		}
@@ -184,9 +186,6 @@ void show_alloc_mem(void)
 			(unsigned long int)HEADER2DATA(tmp),
 			(unsigned long int)(HEADER2DATA(tmp) + tmp->size),
 			tmp->size);
-		#if DEBUG == 1
-			printf((tmp->free == FREE) ? (" free") : (" not free"));
-		#endif
 		printf("\n");
 		tmp = tmp->next;
 	}
