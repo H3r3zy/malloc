@@ -5,7 +5,7 @@
 ## created by sahel.lucas-saoudi@epitech.eu
 ##
 
-SRC	=	src/malloc_alligned.c
+SRC	=	
 
 SRC2	=	src/malloc.c
 
