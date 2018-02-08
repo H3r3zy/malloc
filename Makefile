@@ -5,30 +5,35 @@
 ## created by sahel.lucas-saoudi@epitech.eu
 ##
 
-SRC	=	src/malloc_alligned.c
+SRC		=	src/malloc_alligned.c		\
+			src/realloc.c			\
+			src/free.c			\
+			src/show_alloc_mem.c		\
+			src/calloc.c			\
+			src/manage_block.c
 
-OBJ	=	$(SRC:.c=.o)
+OBJ		=	$(SRC:.c=.o)
 
-NAME	=	libmy_malloc.so
+NAME		=	libmy_malloc.so
 
-CFLAGS	=	-W -Wall -Wextra -I src
+CFLAGS		=	-W -Wall -Wextra -fPIC -I include/
 
-$(NAME):
-	gcc -shared -o $(NAME) -fPIC $(SRC) -lpthread
+$(NAME):		$(OBJ)
+			gcc -shared -o $(NAME) $(OBJ)
 
-all: $(NAME)
+all:			$(NAME)
 
 clean:
-	rm -rf $(OBJ)
+			rm -rf $(OBJ)
 
-fclean: clean
-	rm -rf $(NAME)
+fclean:			clean
+			rm -rf $(NAME)
 
-re: fclean all
+re:			fclean all
 
-debug:	CFLAGS += -ggdb3
+debug:			CFLAGS += -ggdb3
 
-debug: fclean
-	gcc -D DEBUG=1 -shared -o $(NAME) -fPIC $(SRC) -lpthread
+debug:			fclean
+			gcc -D DEBUG=1 -shared -o $(NAME) -fPIC $(SRC) -lpthread
 
-.PHONY:	all clean fclean re debug
+.PHONY:			all clean fclean re debug
