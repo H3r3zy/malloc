@@ -76,7 +76,7 @@ extern const int 	MIN_PAGESIZE_NUMBER;
 #ifndef 	VALIDBLOCK
 # define 	VALIDBLOCK(block) 	(g_list && 			\
 	(t_block *) (block) >= g_list && 				\
-	(char *) (block) < (char *)(g_list + allocated)) ? (block) : (NULL)
+	(char *) (block) < (char *)(g_list) + allocated) ? (block) : (NULL)
 #endif
 
 #ifndef 	DATA2HEADER

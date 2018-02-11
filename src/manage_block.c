@@ -54,7 +54,7 @@ t_block *morecore(t_block *end, int size)
 
 	allocated += new_size;
 	block = sbrk(0);
-	if (-1 == brk((char *)(block + new_size)))
+	if (-1 == brk((char *)(block) + new_size))
 		return (NULL);
 	block->next = NULL;
 	block->free = FREE;
