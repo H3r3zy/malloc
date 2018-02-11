@@ -9,15 +9,6 @@
 
 static void *add_block_realloc(t_block *block, t_block *new_block, size_t size)
 {
-	void *data = NULL;
-
-	if (block->next->free == FREE &&
-		block->size + BLOCK_SIZE(block->next->size) >= size) {
-		LOCK(&secure_thread);
-		data = VALIDBLOCK(HEADER2DATA(fusion_block(block)));
-		UNLOCK(&secure_thread);
-		return (data);
-	}
 	new_block = malloc(size);
 	if (!new_block)
 		return (NULL);
@@ -50,8 +41,8 @@ void *realloc(void *ptr, size_t size)
 	size = DATA_SIZE(ALIGN_UP(BLOCK_SIZE(size), ALIGNEMENT));
 	if (!ptr || !g_list || !block)
 		return (malloc(size));
-	if (size < (size_t)block->size)
-		return (return_block_free(block, size, ptr));
+	if (size <= (size_t)block->size)
+		return (ptr);
 	if (block->next)
 		return (add_block_realloc(block, new_block, size));
 	LOCK(&secure_thread);
