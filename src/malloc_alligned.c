@@ -16,11 +16,10 @@ const int 	MIN_PAGESIZE_NUMBER = 32;
 
 void *malloc(size_t size)
 {
-	t_block *block = NULL;
+	t_block *block = g_list;
 	t_block *previous = NULL;
 
 	size = DATA_SIZE(ALIGN_UP(BLOCK_SIZE(size), ALIGNEMENT));
-	block = g_list;
 	LOCK(&secure_thread);
 	while (block) {
 		if (block->free == FREE && (size_t)block->size >= size) {
