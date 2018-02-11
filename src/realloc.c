@@ -21,13 +21,6 @@ static void *add_block_realloc(t_block *block, t_block *new_block, size_t size)
 	return (VALIDBLOCK(HEADER2DATA(new_block)));
 }
 
-static void *return_block_free(t_block *block, size_t size, void *ptr)
-{
-	LOCK(&secure_thread);
-	split_block(block, size);
-	UNLOCK(&secure_thread);
-	return (ptr);
-}
 
 void *realloc(void *ptr, size_t size)
 {
@@ -42,7 +35,7 @@ void *realloc(void *ptr, size_t size)
 	if (!ptr || !g_list || !block)
 		return (malloc(size));
 	if (size <= (size_t)block->size)
-		return (return_block_free(block, size, ptr));
+		return (ptr);
 	if (block->next)
 		return (add_block_realloc(block, new_block, size));
 	LOCK(&secure_thread);
