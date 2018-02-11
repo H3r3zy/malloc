@@ -42,7 +42,7 @@ void *realloc(void *ptr, size_t size)
 	if (!ptr || !g_list || !block)
 		return (malloc(size));
 	if (size <= (size_t)block->size)
-		return (ptr);
+		return (return_block_free(block, size, ptr));
 	if (block->next)
 		return (add_block_realloc(block, new_block, size));
 	LOCK(&secure_thread);
